@@ -1,0 +1,32 @@
+[project]
+name = "erech"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "Ole-Jakob Olsen", email = "ole.jakob.olsen@gmail.com" }
+]
+requires-python = ">=3.12"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[dependency-groups]
+dev = [
+    "pytest-watcher>=0.4.3",
+    "pytest>=8.3.5",
+]
+
+[tool.pytest.ini_options]
+addopts = "--no-header"
+
+
+[tool.pytest-watcher]
+now = true
+clear = true
+delay = 0.2
+runner = "pytest"
+runner_args = ["-x"]
+patterns = ["*.py"]
+ignore_patterns = []

@@ -32,9 +32,9 @@
               package = python;
             };
 
-            # env.LD_LIBRARY_PATH = lib.makeLibraryPath [
-            #   pkgs-unstable.ruff
-            # ];
+            env.LD_LIBRARY_PATH = lib.makeLibraryPath [
+              pkgs-unstable.ruff-lsp
+            ];
 
             scripts = {
               test-watch = {

@@ -219,13 +219,9 @@ class DictMatcher(LazyComparison):
         return self
 
 
-
-
 class Have(Chains):
     def __getitem__(self, index: Hashable):
         return DictMatcher(index)
-
-
 
 
 class DictShould(Chains, Negatable):
@@ -446,8 +442,8 @@ class Assertable:
             return ValueAssertable(value)
 
 
-
 be = LazyComparison()
+
 
 @overload
 def expect(value: dict[Any, Any]) -> DictAssertable: ...
@@ -456,7 +452,9 @@ def expect(value: dict[Any, Any]) -> DictAssertable: ...
 @overload
 def expect(value: int) -> ValueAssertable: ...
 
+
 BASE_TYPES = dict | int
+
 
 def expect(value: BASE_TYPES):
     __tracebackhide__ = HIDE_TRACEBACK

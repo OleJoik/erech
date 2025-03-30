@@ -6,5 +6,3 @@ from erech import Have
 def have():
     """Provides the have instance for assertions."""
     return Have()
-
-

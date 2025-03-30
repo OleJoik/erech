@@ -29,6 +29,10 @@
               package = python;
             };
 
+            env.LD_LIBRARY_PATH = lib.makeLibraryPath [
+              pkgs.ruff-lsp
+            ];
+
             scripts = {
               test-watch = {
                 description = "Runs unit test in watch mode";

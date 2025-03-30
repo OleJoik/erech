@@ -51,9 +51,9 @@ jobs:
 
       - name: Run ruff
         run: |
-          source .venv/bin/activate
-          ruff check .
-          ruff format --check .
+          uv run ruff --version
+          uv run ruff check .
+          uv run ruff format --check .
 
       - name: Run pyright
         run: |

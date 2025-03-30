@@ -10,6 +10,10 @@ jobs:
   build-and-publish:
     runs-on: ubuntu-latest
 
+    strategy:
+      matrix:
+        python-version: ["3.9", "3.10", "3.11", "3.12", "3.13"]
+
     # Access to push tags
     permissions:
       contents: write
@@ -19,14 +23,18 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+
       - name: Install uv
         run: |
           curl -LsSf https://astral.sh/uv/install.sh | sh
           echo "$HOME/.cargo/bin" >> $GITHUB_PATH
 
-      - name: Set up Python with uv
+      - name: Set Python dev env with uv
         run: |
-          uv python install 3.11
           uv sync --all-extras
 
       - name: Determine and bump version

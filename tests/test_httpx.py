@@ -1,5 +1,5 @@
 import pytest
-from erech import BASE_TYPES, DictMatcher, expect as _expect
+from erech import BASE_TYPES, DictMatcher, Have, expect as _expect
 import httpx
 
 
@@ -24,8 +24,9 @@ def expect(value: BASE_TYPES | httpx.Response):
 
 
 @pytest.mark.skip
-def test_httpx_response_assertions(have):
-    response = httpx.Response(200, text="OK")
+def test_httpx_response_assertions(have: Have):
+    _ = have
+    # response = httpx.Response(200, text="OK")
     # expect(response).should[have.status_code.equal(200)] # type: ignore
 
     assert False

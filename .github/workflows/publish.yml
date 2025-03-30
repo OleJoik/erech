@@ -7,17 +7,13 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-and-publish:
+  ci:
     runs-on: ubuntu-latest
 
     strategy:
       matrix:
         python-version: ["3.9", "3.10", "3.11", "3.12", "3.13"]
 
-    # Access to push tags
-    permissions:
-      contents: write
-      actions: write
 
     steps:
       - name: Checkout code
@@ -37,6 +33,29 @@ jobs:
         run: |
           uv sync --all-extras
 
+      - name: Run tests
+        run: |
+          .venv/bin/python -m pytest tests
+
+      - name: Run ruff
+        run: |
+          uv run ruff --version
+          uv run ruff check .
+          uv run ruff format --check .
+
+      - run: echo "$PWD/.venv/bin" >> $GITHUB_PATH
+      - uses: jakebailey/pyright-action@v1
+
+
+  deploy:
+    needs: ci
+    runs-on: ubuntu-latest
+    # Access to push tags
+    permissions:
+      contents: write
+      actions: write
+
+    steps:
       - name: Determine and bump version
         id: version
         run: |
@@ -58,6 +77,11 @@ jobs:
 
           uv sync
 
+      - name: Install uv
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+
       - name: Create GitHub Tag
         run: |
           git config user.name "GitHub Actions"
@@ -65,18 +89,6 @@ jobs:
           git tag "v${{ steps.version.outputs.new_version }}"
           git push origin "v${{ steps.version.outputs.new_version }}"
 
-      - name: Run tests
-        run: |
-          .venv/bin/python -m pytest tests
-
-      - name: Run ruff
-        run: |
-          uv run ruff --version
-          uv run ruff check .
-          uv run ruff format --check .
-
-      - run: echo "$PWD/.venv/bin" >> $GITHUB_PATH
-      - uses: jakebailey/pyright-action@v1
 
       - name: Build and publish
         run: |
@@ -84,4 +96,3 @@ jobs:
           uv publish
         env:
           UV_PUBLISH_TOKEN: ${{ secrets.PYPI_TOKEN }}
-

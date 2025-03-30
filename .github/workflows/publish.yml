@@ -55,6 +55,7 @@ jobs:
           uv run ruff check .
           uv run ruff format --check .
 
+      - run: echo "$PWD/.venv/bin" >> $GITHUB_PATH
       - uses: jakebailey/pyright-action@v1
 
       - name: Build and publish

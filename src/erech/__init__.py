@@ -202,9 +202,9 @@ class DictMatcher(LazyComparison):
 
     def _match_dict(self, dict: dict, negated: bool) -> bool:
         if negated and not self._comparisons:
-            assert (
-                self._key not in dict
-            ), f"key {self._key} in dict {dict}, should not be"
+            assert self._key not in dict, (
+                f"key {self._key} in dict {dict}, should not be"
+            )
 
             return False
 

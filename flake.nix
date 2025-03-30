@@ -1,6 +1,7 @@
 {
   inputs = {
     nixpkgs.url = "github:cachix/devenv-nixpkgs/rolling";
+    nixpkgs-unstable.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
     devenv.url = "github:cachix/devenv";
   };
 
@@ -9,10 +10,11 @@
     extra-substituters = "https://devenv.cachix.org";
   };
 
-  outputs = { self, nixpkgs, devenv, ... } @ inputs:
+  outputs = { self, nixpkgs, devenv, nixpkgs-unstable, ... } @ inputs:
     let
       system = "x86_64-linux";
       pkgs = nixpkgs.legacyPackages.${system};
+      pkgs-unstable = nixpkgs-unstable.legacyPackages.${system};
       python = pkgs.python312;
     in
     {
@@ -22,6 +24,7 @@
           ({ pkgs, config, lib, ... }: {
             packages = [
               pkgs.uv
+              pkgs-unstable.ruff
             ];
 
             languages.python = {
@@ -29,9 +32,9 @@
               package = python;
             };
 
-            env.LD_LIBRARY_PATH = lib.makeLibraryPath [
-              pkgs.ruff-lsp
-            ];
+            # env.LD_LIBRARY_PATH = lib.makeLibraryPath [
+            #   pkgs-unstable.ruff
+            # ];
 
             scripts = {
               test-watch = {

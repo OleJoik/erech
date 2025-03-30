@@ -56,6 +56,9 @@ jobs:
       actions: write
 
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
       - name: Determine and bump version
         id: version
         run: |

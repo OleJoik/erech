@@ -8,9 +8,10 @@
 Named after the **Stone of Erech**, the ancient Númenórean relic upon which oaths were sworn 
 and long-awaited reckoning was called, this library is built for readability and expressiveness, 
 helping you write tests that read like plain English — with the flowing elegance of Elvish.
-No more tests written in plain python, or the cryptic tongue of Mordor (which we will not utter here).
-Just as Isildur once bound oathbreakers at the Stone of Erech with a curse that echoed through the ages, 
-your tests are bound to declare their intent — and to stand accountable.
+No more tests written in plain python, written with repetetive cryptic dictionary attribute references 
+in the tongue of Mordor (which we will not utter here). Just as Isildur once bound oathbreakers at 
+the Stone of Erech with a curse that echoed through the ages, your tests are bound to declare their intent 
+— and to stand accountable.
 
 ## Features
 

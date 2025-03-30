@@ -47,12 +47,12 @@ jobs:
 
       - name: Run tests
         run: |
-          pytest
+          uv run pytest
 
       - name: Run ruff
         run: |
-          ruff check .
-          ruff format --check .
+          uv run ruff check .
+          uv run ruff format --check .
 
       - name: Run pyright
         run: |

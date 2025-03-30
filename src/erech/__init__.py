@@ -219,14 +219,13 @@ class DictMatcher(LazyComparison):
         return self
 
 
-class MetaHave(type):
-    def __getitem__(cls, index: Hashable):
+
+
+class Have(Chains):
+    def __getitem__(self, index: Hashable):
         return DictMatcher(index)
 
 
-class have(Chains, metaclass=MetaHave):
-    def key(self, key: str) -> DictMatcher:
-        return DictMatcher(key)
 
 
 class DictShould(Chains, Negatable):
@@ -447,6 +446,9 @@ class Assertable:
             return ValueAssertable(value)
 
 
+
+be = LazyComparison()
+
 @overload
 def expect(value: dict[Any, Any]) -> DictAssertable: ...
 
@@ -454,8 +456,9 @@ def expect(value: dict[Any, Any]) -> DictAssertable: ...
 @overload
 def expect(value: int) -> ValueAssertable: ...
 
+BASE_TYPES = dict | int
 
-def expect(value: dict | int):
+def expect(value: BASE_TYPES):
     __tracebackhide__ = HIDE_TRACEBACK
     if isinstance(value, dict):
         return DictAssertable(value)
@@ -463,6 +466,3 @@ def expect(value: dict | int):
         return ValueAssertable(value)
     else:
         raise NotImplementedError()
-
-
-be = LazyComparison()

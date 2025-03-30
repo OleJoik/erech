@@ -1,6 +1,6 @@
 from uuid import uuid4
 import pytest
-from erech import Assertable, DictAssertable, expect, have
+from erech import Assertable, DictAssertable, Have, expect
 
 
 def test_dict_assertable_from_create():
@@ -46,18 +46,18 @@ def test_dict_expect_to_not_have_any_keys():
     expect({"a": 1, "b": 2}).to.not_.have.any.keys("c", "d")
 
 
-def test_dict_expect_to_not_have_any_keys_simpler_syntax():
+def test_dict_expect_to_not_have_any_keys_simpler_syntax(have: Have):
     expect({"a": 1, "b": 2}).should.not_[have["c"], have["d"]]
 
     with pytest.raises(AssertionError):
         expect({"a": 1, "b": 2}).should.not_[have["a"], have["b"]]
 
 
-def test_dict_negated_should_passed_to_children():
+def test_dict_negated_should_passed_to_children(have: Have):
     expect({"a": 1, "b": 2}).should.not_[have["a"].that.equal(2)]
 
 
-def test_dict_should_match_multiple_conditions():
+def test_dict_should_match_multiple_conditions(have: Have):
     expect({"gameId": str(uuid4()), "userId": str(uuid4()), "c": 3}).should[
         have["gameId"].that.matches.uuid,
         have["userId"].that.matches.uuid,

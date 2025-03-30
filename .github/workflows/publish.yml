@@ -22,7 +22,7 @@ jobs:
       - name: Set up Python with uv
         run: |
           uv python install 3.11
-          uv sync
+          uv sync --all-extras
 
       - name: Determine and bump version
         id: version
@@ -47,12 +47,12 @@ jobs:
 
       - name: Run tests
         run: |
-          uv run pytest
+          .venv/bin/python -m pytest tests
 
       - name: Run ruff
         run: |
-          uv run ruff check .
-          uv run ruff format --check .
+          ruff check .
+          ruff format --check .
 
       - name: Run pyright
         run: |

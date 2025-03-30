@@ -41,7 +41,15 @@ class Chains:
         return self
 
     @property
+    def the(self):
+        return self
+
+    @property
     def same(self):
+        return self
+
+    @property
+    def with_(self):
         return self
 
     @property

@@ -4,15 +4,16 @@ from typing import Any, Callable, overload
 
 from erech.chains import Chains
 
+HIDE_TRACEBACK = False
 
-class AssertNot:
-    def __init__(self, target: Any) -> None:
-        _ = target
-        self._not_set = False
+
+class Negatable:
+    def __init__(self, *_) -> None:
+        self._negated = False
 
     @property
     def not_(self):
-        self._not_set = True
+        self._negated = True
         return self
 
 
@@ -41,7 +42,7 @@ class BetweenThisAnd:
         assert result, error_text
 
 
-class Comparison(Chains, AssertNot):
+class Comparison(Chains, Negatable):
     def __init__(self, target) -> None:
         self._target = target
         super().__init__(target)
@@ -50,11 +51,11 @@ class Comparison(Chains, AssertNot):
         self, comparable: Callable[[], bool], other: int | float, comparison: str
     ):
         result = comparable()
-        if self._not_set:
+        if self._negated:
             result = not result
 
-        not_ = "not " if not self._not_set else ""
-        negated_error = ", should not be" if self._not_set else ""
+        not_ = "not " if not self._negated else ""
+        negated_error = ", should not be" if self._negated else ""
 
         error_text = f"{self._target} is {not_}{comparison} {other}{negated_error}"
 
@@ -93,43 +94,71 @@ class Comparison(Chains, AssertNot):
         assert res, err
 
     def between(self, this: int | float):
-        return BetweenThisAnd(self._target, this, self._not_set)
+        return BetweenThisAnd(self._target, this, self._negated)
 
 
-class LazyComparison(Chains):
+class LazyComparison(Chains, Negatable):
     def __init__(self) -> None:
-        self._comparisons: list[Callable[[int | float], None]] = []
+        self._comparisons: list[Callable[[int | float], bool]] = []
+        super().__init__()
 
-    def _register(self, comparison: Callable[[int | float], None]):
-        self._comparisons.append(comparison)
+    def _register(
+        self,
+        comparable: Callable[[int | float], bool],
+        other: int | float,
+        comparison: str,
+    ):
+        def _comparison(target: int | float):
+            result = comparable(target)
+            if self._negated:
+                result = not result
 
-        return self
+            not_ = "not " if not self._negated else ""
+            negated_error = ", should not be" if self._negated else ""
+
+            error_text = f"{target} is {not_}{comparison} {other}{negated_error}"
+
+            assert result, error_text
+
+            return result
+
+        self._comparisons.append(_comparison)
 
     def less_than(self, other: int | float):
-        def fn(target: int | float):
-            assert target < other, f"{target} is not less than {other}"
-
-        return self._register(fn)
+        self._register(
+            lambda target: target < other,
+            other,
+            "less than",
+        )
+        return self
 
     def greater_than(self, other: int | float):
-        def fn(target: int | float):
-            assert target > other, f"{target} is not greater than {other}"
-
-        return self._register(fn)
+        self._register(
+            lambda target: target > other,
+            other,
+            "greater than",
+        )
+        return self
 
     def divisible_by(self, other: int | float):
-        def fn(target: int | float):
-            assert target % other == 0, f"{target} is not divisible by {other}"
-
-        return self._register(fn)
+        self._register(
+            lambda target: target % other == 0,
+            other,
+            "divisible by",
+        )
+        return self
 
     def equal(self, other: int | float):
-        def fn(target: int | float):
-            assert target == other, f"{target} does not equal {other}"
+        self._register(
+            lambda target: target == other,
+            other,
+            "equal to",
+        )
+        return self
 
-        return self._register(fn)
-
-    def _match(self, target: int | float):
+    def _match(self, target: int | float, negated: bool):
+        if negated:
+            self._negated = negated
         for c in self._comparisons:
             c(target)
 
@@ -166,118 +195,116 @@ class Matcher:
         return match
 
 
-class DictMatcher(Chains):
-    def __init__(self, key: str) -> None:
+class DictMatcher(LazyComparison):
+    def __init__(self, key: Hashable) -> None:
         self._key = key
-        self._match: Callable[[Any], bool]
+        super().__init__()
 
-    def _match_dict(self, dict: dict) -> bool:
+    def _match_dict(self, dict: dict, negated: bool) -> bool:
+        if negated and not self._comparisons:
+            assert (
+                self._key not in dict
+            ), f"key {self._key} in dict {dict}, should not be"
+
+            return False
+
         assert self._key in dict, f"key {self._key} not in dict {dict}"
-        self._match(dict[self._key])
+        if self._comparisons:
+            self._match(dict[self._key], negated)
         return False
 
     @property
     def uuid(self):
-        self._match = lambda val: Matcher(val).uuid
+        self._comparisons.append(lambda val: Matcher(val).uuid)
         return self
 
 
-class Selector(Chains):
+class MetaHave(type):
+    def __getitem__(cls, index: Hashable):
+        return DictMatcher(index)
+
+
+class have(Chains, metaclass=MetaHave):
     def key(self, key: str) -> DictMatcher:
         return DictMatcher(key)
 
 
-class DictShould:
+class DictShould(Chains, Negatable):
     def __init__(self, dict_value: Any) -> None:
+        __tracebackhide__ = HIDE_TRACEBACK
         self._dict_value = dict_value
+        super().__init__(self._dict_value)
 
     def __getitem__(self, items: DictMatcher | tuple[DictMatcher, ...]):
+        __tracebackhide__ = HIDE_TRACEBACK
         if isinstance(items, tuple):
             for i in items:
-                i._match_dict(self._dict_value)
+                i._match_dict(self._dict_value, self._negated)
         else:
-            items._match_dict(self._dict_value)
+            items._match_dict(self._dict_value, self._negated)
 
 
-class ValueShould(Comparison):
+class ValueShould(Comparison, Negatable):
     def __init__(self, value: Any) -> None:
-        super().__init__(value)
+        __tracebackhide__ = HIDE_TRACEBACK
         self._value = value
+        super().__init__(value)
 
     def __getitem__(self, items: LazyComparison | tuple[LazyComparison, ...]):
+        __tracebackhide__ = HIDE_TRACEBACK
         if isinstance(items, tuple):
             for i in items:
-                i._match(self._value)
+                i._match(self._value, self._negated)
         else:
-            items._match(self._value)
+            items._match(self._value, self._negated)
 
 
-class AssertKeys(AssertNot):
+class AssertKeys(Negatable):
     def __init__(self, target: dict | set | list) -> None:
+        __tracebackhide__ = HIDE_TRACEBACK
         super().__init__(target)
         self._target = target
-        self._chech_all = True
-        self._check_includes_only = False
+        self._should_only_include_given_keys = True
+        self._include_was_specified = False
 
     @property
     def include(self):
-        """`.include` can also be used as a language chain, causing all `.members` and
-        `.keys` assertions that follow in the chain to require the target to be a
-        superset of the expected set, rather than an identical set. Note that
-        `.members` ignores duplicates in the subset when `.include` is added.
-
-            // Target object's keys are a superset of ['a', 'b'] but not identical
-            expect({a: 1, b: 2, c: 3}).to.include.all.keys('a', 'b');
-            expect({a: 1, b: 2, c: 3}).to.not.have.all.keys('a', 'b');
-
-            // Target array is a superset of [1, 2] but not identical
-            expect([1, 2, 3]).to.include.members([1, 2]);
-            expect([1, 2, 3]).to.not.have.members([1, 2]);
-
-            // Duplicates in the subset are ignored
-            expect([1, 2, 3]).to.include.members([1, 2, 2, 2]);
-
-        Note that adding `.any` earlier in the chain causes the `.keys` assertion
-        to ignore `.include`.
-
-            // Both assertions are identical
-            expect({a: 1}).to.include.any.keys('a', 'b');
-            expect({a: 1}).to.have.any.keys('a', 'b');
-
+        """
         The aliases `.includes`, `.contain`, and `.contains` can be used
         interchangeably with `.include`."""
-
-        self._check_includes_only = True
+        __tracebackhide__ = HIDE_TRACEBACK
+        self._include_was_specified = True
         return self
 
     @property
     def includes(self):
+        __tracebackhide__ = HIDE_TRACEBACK
         return self.include
 
     @property
     def contain(self):
+        __tracebackhide__ = HIDE_TRACEBACK
         return self.include
 
     @property
     def contains(self):
+        __tracebackhide__ = HIDE_TRACEBACK
         return self.include
 
     @property
-    def all(self):
-        """### .all
+    def only(self):
+        """
+        ### .only
 
         Causes all `.keys` assertions that follow in the chain to require that the
-        target have all of the given keys. This is the opposite of `.any`, which
+        target have all of the given keys, and no other keys. This is the opposite of `.any`,
         only requires that the target have at least one of the given keys.
 
-            expect({"a": 1, "b": 2}).to.have.all.keys("a", "b")
+            expect({"a": 1, "b": 2}).to.only.have.keys("a", "b")
+        """
+        __tracebackhide__ = HIDE_TRACEBACK
 
-        Note that `.all` is used by default when neither `.all` nor `.any` are
-        added earlier in the chain. However, it's often best to add `.all` anyway
-        because it improves readability.
-
-        See the `.keys` doc for guidance on when to use `.any` or `.all`."""
-        self._chech_all = True
+        self._should_only_include_given_keys = True
         return self
 
     @property
@@ -293,8 +320,9 @@ class AssertKeys(AssertNot):
 
         See the `.keys` doc for guidance on when to use `.any` or `.all`.
         """
+        __tracebackhide__ = HIDE_TRACEBACK
 
-        self._chech_all = False
+        self._should_only_include_given_keys = False
         return self
 
     def keys(self, *keys: Hashable):
@@ -343,16 +371,17 @@ class AssertKeys(AssertNot):
 
         The alias `.key` can be used interchangeably with `.keys`.
         """
+        __tracebackhide__ = HIDE_TRACEBACK
         result = False
 
-        if self._chech_all:
+        if self._should_only_include_given_keys:
             result = True
 
             for k in keys:
                 if k not in self._target:
                     result = False
 
-            if not self._check_includes_only:
+            if self._should_only_include_given_keys:
                 for t in self._target:
                     if t not in keys:
                         raise AssertionError(f"Key {t} doesn't exists in the target")
@@ -362,37 +391,43 @@ class AssertKeys(AssertNot):
                     result = True
                     break
 
-        if self._not_set:
+        if self._negated:
             result = not result
 
         assert result
 
-    def key(self, key: Hashable):
-        return self.keys(key)
+    def key(self, *key: Hashable | tuple[Hashable, ...]):
+        __tracebackhide__ = HIDE_TRACEBACK
+        return self.keys(*key)
 
 
 class DictAssertable(Chains, AssertKeys):
     def __init__(self, dict: dict) -> None:
+        __tracebackhide__ = HIDE_TRACEBACK
         super().__init__(dict)
         self._dict = dict
 
     @property
     def should(self):
+        __tracebackhide__ = HIDE_TRACEBACK
         return DictShould(self._dict)
 
 
 class ValueAssertable(Comparison):
     def __init__(self, value: Any) -> None:
+        __tracebackhide__ = HIDE_TRACEBACK
         self._value = value
         super().__init__(value)
 
     @property
     def should(self):
+        __tracebackhide__ = HIDE_TRACEBACK
         return ValueShould(self._value)
 
 
 class Assertable:
     def __init__(self) -> None:
+        __tracebackhide__ = HIDE_TRACEBACK
         pass
 
     @overload
@@ -405,6 +440,7 @@ class Assertable:
 
     @staticmethod
     def create(value: dict | int):
+        __tracebackhide__ = HIDE_TRACEBACK
         if isinstance(value, dict):
             return DictAssertable(value)
         elif isinstance(value, int):
@@ -412,7 +448,7 @@ class Assertable:
 
 
 @overload
-def expect(value: dict[Hashable, Any]) -> DictAssertable: ...
+def expect(value: dict[Any, Any]) -> DictAssertable: ...
 
 
 @overload
@@ -420,6 +456,7 @@ def expect(value: int) -> ValueAssertable: ...
 
 
 def expect(value: dict | int):
+    __tracebackhide__ = HIDE_TRACEBACK
     if isinstance(value, dict):
         return DictAssertable(value)
     elif isinstance(value, int):
@@ -429,5 +466,3 @@ def expect(value: dict | int):
 
 
 be = LazyComparison()
-
-have = Selector()

@@ -57,3 +57,13 @@ def test_number_against_multiple_comparisons():
     with pytest.raises(AssertionError) as err:
         check_condition(7)
     assert "7 is not divisible by 3" == str(err.value)
+
+
+@pytest.mark.skip("not implemented yet")
+def test_number_have_condition_too():
+    # expect(4).should[
+    #     have.value.between(1).and_(3),
+    #     be.greater_than(0),
+    # ]
+
+    assert False

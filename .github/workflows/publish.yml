@@ -30,7 +30,7 @@ jobs:
           # Get the latest tag (or default to 0.0.0 if none exist)
           LATEST_TAG=$(git tag --list "v*" --sort=-v:refname | head -n 1)
           if [ -z "$LATEST_TAG" ]; then
-            LATEST_TAG="v0.0.5"
+            LATEST_TAG="v0.0.0"
           fi
           echo "Latest tag: $LATEST_TAG"
           

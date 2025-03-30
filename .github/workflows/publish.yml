@@ -1,0 +1,73 @@
+name: CI/CD
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+
+      - name: Set up Python with uv
+        run: |
+          uv python install 3.11
+          uv sync
+
+      - name: Determine and bump version
+        id: version
+        run: |
+          # Get the latest tag (or default to 0.0.0 if none exist)
+          LATEST_TAG=$(git tag --list "v*" --sort=-v:refname | head -n 1)
+          if [ -z "$LATEST_TAG" ]; then
+            LATEST_TAG="v0.0.5"
+          fi
+          echo "Latest tag: $LATEST_TAG"
+          
+          # Strip 'v' prefix if present and bump patch version
+          CURRENT_VERSION=${LATEST_TAG#v}
+          NEW_VERSION=$(uv run python -c "from packaging import version; v = version.parse('$CURRENT_VERSION'); print(f'{v.major}.{v.minor}.{v.micro + 1}')")
+          echo "New version: $NEW_VERSION"
+          
+          sed -i "s/version = .*/version = \"$NEW_VERSION\"/" pyproject.toml
+          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+
+          uv sync
+
+
+      - name: Run tests
+        run: |
+          uv run pytest
+
+      - name: Run ruff
+        run: |
+          uv run ruff check .
+          uv run ruff format --check .
+
+      - name: Run pyright
+        run: |
+          uv run pyright
+
+      - name: Build and publish
+        run: |
+          uv build 
+          uv publish
+        env:
+          UV_PUBLISH_TOKEN: ${{ secrets.PYPI_TOKEN }}
+
+      - name: Create GitHub Tag
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git tag "v${{ steps.version.outputs.new_version }}"
+          git push origin "v${{ steps.version.outputs.new_version }}"

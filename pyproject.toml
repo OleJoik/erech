@@ -1,6 +1,6 @@
 [project]
 name = "erech"
-version = "0.1.0"
+version = "0.0.0"
 description = "Add your description here"
 readme = "README.md"
 authors = [
@@ -16,6 +16,7 @@ build-backend = "hatchling.build"
 dev = [
     "pytest-watcher>=0.4.3",
     "pytest>=8.3.5",
+    "ruff>=0.11.2",
 ]
 httpx = [
     "httpx>=0.28.1",
